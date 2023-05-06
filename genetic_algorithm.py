@@ -1,6 +1,7 @@
 import random
 import re
 import string
+STOP_CONDITION = 10
 
 
 def read_frequencies(filename):
@@ -54,13 +55,14 @@ class GeneticAlgorithm:
         self.common_words = set(read_common_words(common_words_file))
         self.common_words_weight = common_words_weight
         self.ciphertext = read_text(ciphertext_file)
-        # self.alphabet = sorted(list(set(self.ciphertext) - set(' .,;\n')))
-        self.alphabet = [char for char in string.ascii_lowercase]
+        self.alphabet = sorted(list(set(self.ciphertext) - set(' .,;\n')))
+        # self.alphabet = [char for char in string.ascii_lowercase]
         self.population = self.generate_population()
         self.best_individual = None
         self.best_generation = 1
         self.best_fitness = float('-inf')
         self.steps = 0
+        self.stop_condition = 0
 
     def generate_permutation(self):
         permutation = self.alphabet.copy()
@@ -133,32 +135,17 @@ class GeneticAlgorithm:
         # return selected_population
 
     def crossover(self, parent1, parent2):
-        crossover_point = random.randint(1, len(parent1) - 1)
-
-        offspring1 = {}
-        offspring2 = {}
-
-        for i in range(crossover_point):
-            key = list(parent1.keys())[i]
-            offspring1[key] = parent1[key]
-
-        for i in range(crossover_point, len(parent1)):
-            key = list(parent2.keys())[i]
-            value = parent2[key]
-            if value not in offspring1.values():
-                offspring1[key] = value
-
-        for i in range(crossover_point):
-            key = list(parent2.keys())[i]
-            offspring2[key] = parent2[key]
-
-        for i in range(crossover_point, len(parent1)):
-            key = list(parent1.keys())[i]
-            value = parent1[key]
-            if value not in offspring2.values():
-                offspring2[key] = value
-
-        return find_missing_mapping(offspring1), find_missing_mapping(offspring2)
+        cutoff = random.choice(list(parent1.keys()))
+        child1 = {}
+        child2 = {}
+        for key in parent1:
+            if key <= cutoff:
+                child1[key] = parent1[key]
+                child2[key] = parent2[key]
+            else:
+                child1[key] = parent2[key]
+                child2[key] = parent1[key]
+        return child1, child2
 
     def mutation(self, offspring):
         for i in range(len(offspring)):
@@ -178,10 +165,6 @@ class GeneticAlgorithm:
             new_char = individual.get(c, c)
             text += new_char
         return text
-
-    def satisfactory_solution(self):
-        """Check if a satisfactory solution has been found."""
-        return self.best_fitness == 1
 
     def write_to_files(self, individual, generation):
         # Write the decoded text to plain.txt
@@ -208,13 +191,10 @@ class GeneticAlgorithm:
                 self.best_individual = self.population[best_index]
                 self.best_generation = i
                 self.best_fitness = fitness_scores[best_index]
+                self.stop_condition = 0
 
             # Write current best individual to files
             self.write_to_files(self.best_individual, i+1)
-
-            # Check for satisfactory solution
-            if self.satisfactory_solution():
-                break
 
             # Selection
             parents = self.select(fitness_scores)
@@ -225,11 +205,9 @@ class GeneticAlgorithm:
             for j in range(0, self.population_size, 2):
                 parent1 = parents[j % len(parents)]
                 parent2 = parents[(j + 1) % len(parents)]
-                # child1, child2 = self.crossover(parent1, parent2)
-                # offspring.append(child1)
-                # offspring.append(child2)
-                offspring.append(parent1)
-                offspring.append(parent2)
+                child1, child2 = self.crossover(parent1, parent2)
+                offspring.append(child1)
+                offspring.append(child2)
 
             # Mutation
             for j in range(self.population_size):
@@ -242,6 +220,10 @@ class GeneticAlgorithm:
             # Update population
             self.population = offspring
             self.steps += 1
+            self.stop_condition += 1
+            if self.stop_condition == STOP_CONDITION:
+                print("STOP DUO TO - No change after %s generation" % self.stop_condition)
+                break
 
         # Write final best individual to files
         self.write_to_files(self.best_individual, self.best_generation + 1)
