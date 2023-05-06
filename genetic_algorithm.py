@@ -11,7 +11,7 @@ def read_frequencies(filename):
     frequency = ""
     letter = ""
     for line in lines:
-        m = re.match(r'''(\d\.\d+)\s+([a-zA-z]+)''', line, re.DOTALL|re.IGNORECASE)
+        m = re.match(r'''(\d\.\d+)\s+([a-zA-z]+)''', line, re.DOTALL | re.IGNORECASE)
         if m:
             frequency = float(m.group(1))
             letter = m.group(2)
@@ -37,14 +37,22 @@ def find_missing_mapping(mapping_dict):
     return mapping_dict
 
 
+def read_common_words(filename):
+    with open(filename) as f:
+        words = set(line.strip() for line in f)
+    return words
+
+
 class GeneticAlgorithm:
     def __init__(self, population_size, mutation_rate, generations, letter_frequencies_file, bigram_frequencies_file,
-                 ciphertext_file):
+                 ciphertext_file, common_words_file, common_words_weight):
         self.population_size = population_size
         self.mutation_rate = mutation_rate
         self.generations = generations
         self.bigram_frequencies = read_frequencies(bigram_frequencies_file)
         self.letter_frequencies = read_frequencies(letter_frequencies_file)
+        self.common_words = set(read_common_words(common_words_file))
+        self.common_words_weight = common_words_weight
         self.ciphertext = read_text(ciphertext_file)
         # self.alphabet = sorted(list(set(self.ciphertext) - set(' .,;\n')))
         self.alphabet = [char for char in string.ascii_lowercase]
@@ -89,7 +97,13 @@ class GeneticAlgorithm:
             [(self.letter_frequencies[letter] - letter_frequencies.get(letter, 0)) ** 2 for letter in self.alphabet])
         bigram_fitness = sum([(self.bigram_frequencies[bigram] - bigram_frequencies.get(bigram, 0)) ** 2 for bigram in
                               self.bigram_frequencies])
-        fitness_value = letter_fitness + bigram_fitness
+
+        # Calculate fitness contribution of common words
+        decoded_words = re.findall(r'''\b\w+\b''', decoded_text, re.DOTALL | re.IGNORECASE)
+        common_words_count = sum([1 for word in decoded_words if word.lower() in self.common_words])
+        common_words_fitness = (common_words_count * self.common_words_weight) ** 2
+
+        fitness_value = letter_fitness + bigram_fitness + common_words_fitness
 
         return fitness_value
 
@@ -211,9 +225,11 @@ class GeneticAlgorithm:
             for j in range(0, self.population_size, 2):
                 parent1 = parents[j % len(parents)]
                 parent2 = parents[(j + 1) % len(parents)]
-                child1, child2 = self.crossover(parent1, parent2)
-                offspring.append(child1)
-                offspring.append(child2)
+                # child1, child2 = self.crossover(parent1, parent2)
+                # offspring.append(child1)
+                # offspring.append(child2)
+                offspring.append(parent1)
+                offspring.append(parent2)
 
             # Mutation
             for j in range(self.population_size):
