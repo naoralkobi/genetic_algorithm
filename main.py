@@ -3,8 +3,8 @@ import time
 
 population_size = 100
 mutation_rate = 0.05
-num_generations = 500
-common_words_weight = 0.3
+num_generations = 300
+common_words_weight = 0.25
 
 # Create an instance of the GeneticAlgorithm class
 ga = GeneticAlgorithm(population_size, mutation_rate, num_generations, "Letter_Freq.txt", "Letter2_Freq.txt",

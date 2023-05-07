@@ -1,7 +1,11 @@
 import random
 import re
 import string
-STOP_CONDITION = 25
+import threading
+
+STOP_CONDITION = 35
+TOURNAMENT_SIZE = 10
+NUM_PARENTS = 80
 
 
 def read_frequencies(filename):
@@ -86,7 +90,7 @@ class GeneticAlgorithm:
 
     def fitness(self, individual):
         # Generate decoded text using the individual's permutation table
-        decoded_text = ''.join([individual.get(symbol, symbol) for symbol in self.ciphertext])
+        decoded_text = self.decode_text(individual)
 
         # Calculate letter frequencies for the decoded text
         letter_frequencies = {letter: decoded_text.count(letter) / len(decoded_text) for letter in self.alphabet}
@@ -140,6 +144,16 @@ class GeneticAlgorithm:
         # return unique_dicts
         return selected_population
 
+    # Selects a parent using tournament selection
+    def tournament_selection(self):
+        # Select a random subset of the population for the tournament
+        tournament = random.sample(self.population, TOURNAMENT_SIZE)
+        # Evaluate fitness of each individual in population
+        fitness_scores = [int(self.fitness(individual)) for individual in tournament]
+        # Find the fittest individual in the tournament
+        best_index = fitness_scores.index(max(fitness_scores))
+        return tournament[best_index]
+
     def crossover(self, parent1, parent2):
         cutoff = random.choice(list(parent1.keys()))
         child1 = {}
@@ -166,7 +180,6 @@ class GeneticAlgorithm:
 
     def decode_text(self, individual):
         """Decode the ciphertext using the given permutation table."""
-        print(len(set(individual.values())))
         text = ""
         for c in self.ciphertext:
             new_char = individual.get(c, c)
@@ -190,7 +203,7 @@ class GeneticAlgorithm:
     def evolve(self):
         for i in range(self.generations):
             # Evaluate fitness of each individual in population
-            fitness_scores = [self.fitness(individual) for individual in self.population]
+            fitness_scores = [int(self.fitness(individual)) for individual in self.population]
 
             # Update the best individual and best fitness
             best_index = fitness_scores.index(max(fitness_scores))
@@ -204,7 +217,8 @@ class GeneticAlgorithm:
             self.write_to_files(self.best_individual, i+1)
 
             # Selection
-            parents = self.select(fitness_scores)
+            # parents = self.select(fitness_scores)
+            parents = [self.tournament_selection() for _ in range(NUM_PARENTS)]
 
             # Crossover
             offspring = []
