@@ -1,7 +1,7 @@
 import random
 import re
 import string
-STOP_CONDITION = 10
+STOP_CONDITION = 25
 
 
 def read_frequencies(filename):
@@ -27,14 +27,20 @@ def read_text(filename):
 
 def find_missing_mapping(mapping_dict):
     all_letters = set(string.ascii_lowercase)
-    mapped_letters = set(mapping_dict.keys())
-    unmapped_letters = all_letters - mapped_letters
-    used_values = set(mapping_dict.values())
-    possible_values = all_letters - used_values
-    for letter in unmapped_letters:
-        random_value = random.choice(list(possible_values))
-        mapping_dict[letter] = random_value
-        possible_values -= set(random_value)
+    mapped_letters = set(mapping_dict.values())
+    unmapped_letters = list(all_letters - mapped_letters)
+
+    used_values = set()
+    for key in mapping_dict:
+        value = mapping_dict[key]
+        if value in used_values:
+            for i in range(len(unmapped_letters)):
+                if unmapped_letters[i] not in used_values:
+                    mapping_dict[key] = unmapped_letters[i]
+                    used_values.add(unmapped_letters[i])
+                    break
+        else:
+            used_values.add(value)
     return mapping_dict
 
 
@@ -55,8 +61,8 @@ class GeneticAlgorithm:
         self.common_words = set(read_common_words(common_words_file))
         self.common_words_weight = common_words_weight
         self.ciphertext = read_text(ciphertext_file)
-        self.alphabet = sorted(list(set(self.ciphertext) - set(' .,;\n')))
-        # self.alphabet = [char for char in string.ascii_lowercase]
+        # self.alphabet = sorted(list(set(self.ciphertext) - set(' .,;\n')))
+        self.alphabet = [char for char in string.ascii_lowercase]
         self.population = self.generate_population()
         self.best_individual = None
         self.best_generation = 1
@@ -128,11 +134,11 @@ class GeneticAlgorithm:
                     # return selected_population
                     break
 
-        unique_tuples = set(tuple(sorted(d.items())) for d in selected_population)
-        unique_dicts = [dict(t) for t in unique_tuples]
+        # unique_tuples = set(tuple(sorted(d.items())) for d in selected_population)
+        # unique_dicts = [dict(t) for t in unique_tuples]
 
-        return unique_dicts
-        # return selected_population
+        # return unique_dicts
+        return selected_population
 
     def crossover(self, parent1, parent2):
         cutoff = random.choice(list(parent1.keys()))
@@ -145,7 +151,8 @@ class GeneticAlgorithm:
             else:
                 child1[key] = parent2[key]
                 child2[key] = parent1[key]
-        return child1, child2
+
+        return find_missing_mapping(child1), find_missing_mapping(child2)
 
     def mutation(self, offspring):
         for i in range(len(offspring)):
