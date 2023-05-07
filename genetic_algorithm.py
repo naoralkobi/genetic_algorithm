@@ -1,11 +1,11 @@
 import random
 import re
 import string
-import threading
 
-STOP_CONDITION = 35
+STOP_CONDITION = 50
 TOURNAMENT_SIZE = 10
-NUM_PARENTS = 80
+NUM_PARENTS = 100
+NUM_OF_WORKERS = 10
 
 
 def read_frequencies(filename):
@@ -65,8 +65,8 @@ class GeneticAlgorithm:
         self.common_words = set(read_common_words(common_words_file))
         self.common_words_weight = common_words_weight
         self.ciphertext = read_text(ciphertext_file)
-        # self.alphabet = sorted(list(set(self.ciphertext) - set(' .,;\n')))
-        self.alphabet = [char for char in string.ascii_lowercase]
+        self.alphabet = sorted(list(set(self.ciphertext) - set(' .,;\n')))
+        # self.alphabet = [char for char in string.ascii_lowercase]
         self.population = self.generate_population()
         self.best_individual = None
         self.best_generation = 1
@@ -118,31 +118,6 @@ class GeneticAlgorithm:
         fitness_value = letter_fitness + bigram_fitness + common_words_fitness
 
         return fitness_value
-
-    def select(self, fitness_scores):
-        # Calculate total fitness score
-        total_fitness = sum(fitness_scores)
-
-        # Calculate selection probabilities
-        selection_probabilities = [fitness_score / total_fitness for fitness_score in fitness_scores]
-
-        # Perform roulette wheel selection
-        selected_population = []
-        for _ in range(self.population_size):
-            spin = random.random()
-            cumulative_probability = 0.0
-            for i, probability in enumerate(selection_probabilities):
-                cumulative_probability += probability
-                if spin <= cumulative_probability:
-                    selected_population.append(self.population[i])
-                    # return selected_population
-                    break
-
-        # unique_tuples = set(tuple(sorted(d.items())) for d in selected_population)
-        # unique_dicts = [dict(t) for t in unique_tuples]
-
-        # return unique_dicts
-        return selected_population
 
     # Selects a parent using tournament selection
     def tournament_selection(self):
@@ -198,16 +173,22 @@ class GeneticAlgorithm:
                 f.write(f"{symbol}: {values_list[i]}\n")
 
         # Print the number of steps and best fitness so far
-        print(f"Generation {generation} - Steps: {self.steps}, Best Fitness: {self.best_fitness}")
+        print(f"Generation {generation}, Best Fitness: {self.best_fitness}")
 
     def evolve(self):
         for i in range(self.generations):
+
+            if self.generations == 100:
+                print("hi")
+
             # Evaluate fitness of each individual in population
             fitness_scores = [int(self.fitness(individual)) for individual in self.population]
+            self.steps += len(self.population)
 
             # Update the best individual and best fitness
             best_index = fitness_scores.index(max(fitness_scores))
             if fitness_scores[best_index] > self.best_fitness:
+                print("-----------------------")
                 self.best_individual = self.population[best_index]
                 self.best_generation = i
                 self.best_fitness = fitness_scores[best_index]
@@ -217,8 +198,12 @@ class GeneticAlgorithm:
             self.write_to_files(self.best_individual, i+1)
 
             # Selection
-            # parents = self.select(fitness_scores)
             parents = [self.tournament_selection() for _ in range(NUM_PARENTS)]
+            # parents = []
+            # from multiprocessing.pool import ThreadPool
+            # pool = ThreadPool(processes=NUM_OF_WORKERS)
+            # with pool as p:
+            #     parents = p.map(self.tournament_selection, [[] for _ in range(NUM_PARENTS)])
 
             # Crossover
             offspring = []
@@ -240,7 +225,6 @@ class GeneticAlgorithm:
 
             # Update population
             self.population = offspring
-            self.steps += 1
             self.stop_condition += 1
             if self.stop_condition == STOP_CONDITION:
                 print("STOP DUO TO - No change after %s generation" % self.stop_condition)
@@ -250,7 +234,7 @@ class GeneticAlgorithm:
         self.write_to_files(self.best_individual, self.best_generation + 1)
 
         # Print number of steps
-        print("Total steps:", self.steps)
+        print("Total number of calling to fitness:", self.steps)
 
 
 

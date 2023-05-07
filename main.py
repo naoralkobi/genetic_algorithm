@@ -3,8 +3,8 @@ import time
 
 population_size = 100
 mutation_rate = 0.05
-num_generations = 300
-common_words_weight = 0.25
+num_generations = 1000
+common_words_weight = 0.3
 
 # Create an instance of the GeneticAlgorithm class
 ga = GeneticAlgorithm(population_size, mutation_rate, num_generations, "Letter_Freq.txt", "Letter2_Freq.txt",
@@ -14,5 +14,5 @@ ga = GeneticAlgorithm(population_size, mutation_rate, num_generations, "Letter_F
 start_time = time.time()
 ga.evolve()
 end_time = time.time()
-elapsed_time = end_time - start_time
+elapsed_time = (end_time - start_time) // 60
 print("Elapsed time:", elapsed_time)
