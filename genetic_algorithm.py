@@ -179,6 +179,7 @@ class GeneticAlgorithm:
     def lamarckian_modification(self, individual):
         mutated_individual = individual.copy()
         original_fitness_score = int(self.fitness(mutated_individual))
+        self.steps += 1
 
         # Lamarckian modification
         for _ in range(LAMARCKIAN_STEPS):
@@ -189,6 +190,7 @@ class GeneticAlgorithm:
                 keys[0]]
             # Check if the modified individual has a better fitness score than the original
             new_fitness_score = int(self.fitness(mutated_individual))
+            self.steps += 1
             if new_fitness_score <= original_fitness_score:
                 # Swap back if the modification does not improve the fitness score
                 mutated_individual[keys[1]], mutated_individual[keys[0]] = mutated_individual[keys[0]], \
