@@ -6,6 +6,7 @@ STOP_CONDITION = 50
 TOURNAMENT_SIZE = 10
 NUM_PARENTS = 100
 NUM_OF_WORKERS = 10
+LAMARCKIAN_STEPS = 10
 
 
 def read_frequencies(filename):
@@ -175,11 +176,35 @@ class GeneticAlgorithm:
         # Print the number of steps and best fitness so far
         print(f"Generation {generation}, Best Fitness: {self.best_fitness}")
 
-    def evolve(self):
-        for i in range(self.generations):
+    def lamarckian_modification(self, individual):
+        mutated_individual = individual.copy()
+        original_fitness_score = int(self.fitness(mutated_individual))
 
-            if self.generations == 100:
-                print("hi")
+        # Lamarckian modification
+        for _ in range(LAMARCKIAN_STEPS):
+            # Choose two random keys from individual
+            keys = random.sample(mutated_individual.keys(), 2)
+            # Swap their values
+            mutated_individual[keys[0]], mutated_individual[keys[1]] = mutated_individual[keys[1]], mutated_individual[
+                keys[0]]
+            # Check if the modified individual has a better fitness score than the original
+            new_fitness_score = int(self.fitness(mutated_individual))
+            if new_fitness_score <= original_fitness_score:
+                # Swap back if the modification does not improve the fitness score
+                mutated_individual[keys[1]], mutated_individual[keys[0]] = mutated_individual[keys[0]], \
+                mutated_individual[keys[1]]
+            else:
+                # Update original_fitness_score to reflect the latest best score
+                original_fitness_score = new_fitness_score
+
+        # Return either the mutated or original individual depending on the fitness score
+        if original_fitness_score < int(self.fitness(individual)):
+            return individual
+        else:
+            return mutated_individual
+
+    def evolve(self, lamarckian=None):
+        for i in range(self.generations):
 
             # Evaluate fitness of each individual in population
             fitness_scores = [int(self.fitness(individual)) for individual in self.population]
@@ -218,6 +243,13 @@ class GeneticAlgorithm:
             # Mutation
             for j in range(self.population_size):
                 offspring[j] = self.mutation(offspring[j])
+
+            if lamarckian:
+                # Lamarckian modification
+                for j in range(self.population_size):
+                    modified_individual = self.lamarckian_modification(offspring[j])
+                    offspring[j] = modified_individual
+
 
             # Elitism
             if self.best_individual not in offspring:
