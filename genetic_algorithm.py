@@ -2,11 +2,12 @@ import random
 import re
 import string
 
-STOP_CONDITION = 50
+STOP_CONDITION = 30
 TOURNAMENT_SIZE = 10
 NUM_PARENTS = 100
 NUM_OF_WORKERS = 10
 LAMARCKIAN_STEPS = 10
+LOCAL_MAXIMUM = 10
 
 
 def read_frequencies(filename):
@@ -74,6 +75,7 @@ class GeneticAlgorithm:
         self.best_fitness = float('-inf')
         self.steps = 0
         self.stop_condition = 0
+        self.local_maximum = 0
 
     def generate_permutation(self):
         permutation = self.alphabet.copy()
@@ -121,14 +123,13 @@ class GeneticAlgorithm:
         return fitness_value
 
     # Selects a parent using tournament selection
-    def tournament_selection(self):
+    def tournament_selection(self, best_fitness_score):
         # Select a random subset of the population for the tournament
-        tournament = random.sample(self.population, TOURNAMENT_SIZE)
-        # Evaluate fitness of each individual in population
-        fitness_scores = [int(self.fitness(individual)) for individual in tournament]
+        tournament = random.sample(best_fitness_score, TOURNAMENT_SIZE)
         # Find the fittest individual in the tournament
-        best_index = fitness_scores.index(max(fitness_scores))
-        return tournament[best_index]
+        sorted_tournament = sorted(tournament, key=lambda x: -x[1])
+        best_index, _ = sorted_tournament[0]
+        return self.population[best_index]
 
     def crossover(self, parent1, parent2):
         cutoff = random.choice(list(parent1.keys()))
@@ -178,7 +179,7 @@ class GeneticAlgorithm:
 
     def lamarckian_modification(self, individual):
         mutated_individual = individual.copy()
-        original_fitness_score = int(self.fitness(mutated_individual))
+        original_fitness_score = max_fitness_score = int(self.fitness(mutated_individual))
         self.steps += 1
 
         # Lamarckian modification
@@ -191,46 +192,40 @@ class GeneticAlgorithm:
             # Check if the modified individual has a better fitness score than the original
             new_fitness_score = int(self.fitness(mutated_individual))
             self.steps += 1
-            if new_fitness_score <= original_fitness_score:
+            if new_fitness_score < max_fitness_score:
                 # Swap back if the modification does not improve the fitness score
                 mutated_individual[keys[1]], mutated_individual[keys[0]] = mutated_individual[keys[0]], \
-                mutated_individual[keys[1]]
+                    mutated_individual[keys[1]]
             else:
-                # Update original_fitness_score to reflect the latest best score
-                original_fitness_score = new_fitness_score
+                # Update max_fitness_score to reflect the latest best score
+                max_fitness_score = new_fitness_score
 
-        # Return either the mutated or original individual depending on the fitness score
-        if original_fitness_score < int(self.fitness(individual)):
-            return individual
-        else:
-            return mutated_individual
+        return mutated_individual
 
     def evolve(self, lamarckian=None):
-        for i in range(self.generations):
 
+        for i in range(self.generations):
             # Evaluate fitness of each individual in population
-            fitness_scores = [int(self.fitness(individual)) for individual in self.population]
+            fitness_scores = sorted([(i, int(self.fitness(individual))) for i, individual in
+                                     enumerate(self.population)], key=lambda x: -x[1])
+
             self.steps += len(self.population)
 
             # Update the best individual and best fitness
-            best_index = fitness_scores.index(max(fitness_scores))
-            if fitness_scores[best_index] > self.best_fitness:
+            best_index, best_fitness_score = fitness_scores[0]
+            if best_fitness_score > self.best_fitness:
                 print("-----------------------")
                 self.best_individual = self.population[best_index]
                 self.best_generation = i
-                self.best_fitness = fitness_scores[best_index]
+                self.best_fitness = best_fitness_score
                 self.stop_condition = 0
+                self.local_maximum = 0
 
             # Write current best individual to files
-            self.write_to_files(self.best_individual, i+1)
+            self.write_to_files(self.best_individual, i + 1)
 
             # Selection
-            parents = [self.tournament_selection() for _ in range(NUM_PARENTS)]
-            # parents = []
-            # from multiprocessing.pool import ThreadPool
-            # pool = ThreadPool(processes=NUM_OF_WORKERS)
-            # with pool as p:
-            #     parents = p.map(self.tournament_selection, [[] for _ in range(NUM_PARENTS)])
+            parents = [self.tournament_selection(fitness_scores) for _ in range(NUM_PARENTS)]
 
             # Crossover
             offspring = []
@@ -252,15 +247,26 @@ class GeneticAlgorithm:
                     modified_individual = self.lamarckian_modification(offspring[j])
                     offspring[j] = modified_individual
 
-
             # Elitism
             if self.best_individual not in offspring:
                 offspring[0] = self.best_individual
 
+            if self.local_maximum == LOCAL_MAXIMUM:
+                print("move out local maximum")
+                self.local_maximum = 0
+
+                indexes = random.sample(range(1, 100), 50)
+                for j in indexes:
+                    modified_individual = self.lamarckian_modification(offspring[j])
+                    offspring[j] = modified_individual
+
+
+
             # Update population
             self.population = offspring
             self.stop_condition += 1
-            if self.stop_condition == STOP_CONDITION:
+            self.local_maximum += 1
+            if self.stop_condition == STOP_CONDITION and self.generations > 75:
                 print("STOP DUO TO - No change after %s generation" % self.stop_condition)
                 break
 
@@ -269,7 +275,3 @@ class GeneticAlgorithm:
 
         # Print number of steps
         print("Total number of calling to fitness:", self.steps)
-
-
-
-

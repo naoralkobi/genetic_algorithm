@@ -31,7 +31,7 @@ ga = GeneticAlgorithm(population_size, mutation_rate, num_generations, "Letter_F
 
 # Run the genetic algorithm to find the solution
 start_time = time.time()
-ga.evolve()
+ga.evolve(lamarckian=True)
 end_time = time.time()
 elapsed_time = (end_time - start_time) // 60
 print("Elapsed time:", elapsed_time)
