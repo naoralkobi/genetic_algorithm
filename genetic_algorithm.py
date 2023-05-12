@@ -1,6 +1,7 @@
 import random
 import re
 import string
+import time
 
 STOP_CONDITION = 30
 TOURNAMENT_SIZE = 10
@@ -8,7 +9,8 @@ NUM_PARENTS = 100
 NUM_OF_WORKERS = 10
 LAMARCKIAN_STEPS = 10
 LOCAL_MAXIMUM = 10
-
+IS_LOCAL_MAXIMUM = 1
+LIMIT_RUN = 5
 
 def read_frequencies(filename):
     """Load letter frequency data from a file."""
@@ -67,8 +69,8 @@ class GeneticAlgorithm:
         self.common_words = set(read_common_words(common_words_file))
         self.common_words_weight = common_words_weight
         self.ciphertext = read_text(ciphertext_file)
-        self.alphabet = sorted(list(set(self.ciphertext) - set(' .,;\n')))
-        # self.alphabet = [char for char in string.ascii_lowercase]
+        # self.alphabet = sorted(list(set(self.ciphertext) - set(' .,;\n')))
+        self.alphabet = [char for char in string.ascii_lowercase]
         self.population = self.generate_population()
         self.best_individual = None
         self.best_generation = 1
@@ -163,7 +165,7 @@ class GeneticAlgorithm:
             text += new_char
         return text
 
-    def write_to_files(self, individual, generation):
+    def write_to_files(self, individual, generation, best_fitness):
         # Write the decoded text to plain.txt
         with open("plain.txt", "w") as f:
             f.write(self.decode_text(individual))
@@ -175,7 +177,7 @@ class GeneticAlgorithm:
                 f.write(f"{symbol}: {values_list[i]}\n")
 
         # Print the number of steps and best fitness so far
-        print(f"Generation {generation}, Best Fitness: {self.best_fitness}")
+        print(f"Generation {generation}, Best Fitness: {best_fitness}")
 
     def lamarckian_modification(self, individual):
         mutated_individual = individual.copy()
@@ -214,7 +216,7 @@ class GeneticAlgorithm:
             # Update the best individual and best fitness
             best_index, best_fitness_score = fitness_scores[0]
             if best_fitness_score > self.best_fitness:
-                print("-----------------------")
+                # print("-----------------------")
                 self.best_individual = self.population[best_index]
                 self.best_generation = i
                 self.best_fitness = best_fitness_score
@@ -222,7 +224,7 @@ class GeneticAlgorithm:
                 self.local_maximum = 0
 
             # Write current best individual to files
-            self.write_to_files(self.best_individual, i + 1)
+            # self.write_to_files(self.best_individual, i + 1, self.best_fitness)
 
             # Selection
             parents = [self.tournament_selection(fitness_scores) for _ in range(NUM_PARENTS)]
@@ -252,26 +254,59 @@ class GeneticAlgorithm:
                 offspring[0] = self.best_individual
 
             if self.local_maximum == LOCAL_MAXIMUM:
-                print("move out local maximum")
-                self.local_maximum = 0
-
-                indexes = random.sample(range(1, 100), 50)
-                for j in indexes:
-                    modified_individual = self.lamarckian_modification(offspring[j])
-                    offspring[j] = modified_individual
-
-
+                print("move out from local maximum")
+                return self.best_individual, self.best_generation, self.best_fitness, self.steps
 
             # Update population
             self.population = offspring
             self.stop_condition += 1
             self.local_maximum += 1
+
             if self.stop_condition == STOP_CONDITION and self.generations > 75:
                 print("STOP DUO TO - No change after %s generation" % self.stop_condition)
+                IS_LOCAL_MAXIMUM = 0
                 break
 
-        # Write final best individual to files
-        self.write_to_files(self.best_individual, self.best_generation + 1)
+        return self.best_individual, self.best_generation, self.best_fitness, self.steps
 
-        # Print number of steps
-        print("Total number of calling to fitness:", self.steps)
+
+if __name__ == '__main__':
+    ga = None
+    population_size = 100
+    mutation_rate = 0.05
+    num_generations = 300
+    common_words_weight = 0.3
+    start_time = time.time()
+    best_results = []
+    index = 0
+    while IS_LOCAL_MAXIMUM and LIMIT_RUN > 0:
+        index += 1
+        print("start running number: " + str(index))
+        # Create an instance of the GeneticAlgorithm class
+        ga = GeneticAlgorithm(population_size, mutation_rate, num_generations, "Letter_Freq.txt", "Letter2_Freq.txt",
+                              "enc.txt", "dict.txt", common_words_weight)
+
+        # Run the genetic algorithm to find the solution
+        best_results.append(ga.evolve())
+        # ga.evolve(lamarckian=True)
+        ga.write_to_files(ga.best_individual, ga.best_generation + 1, ga.best_fitness)
+        LIMIT_RUN -= 1
+
+    best_score = 0
+    best_individual = None
+    best_steps = 0
+    best_generation = 0
+    for individual, generation, fitness_score, steps in best_results:
+        if fitness_score > best_score:
+            best_score = fitness_score
+            best_individual = individual
+            best_steps = steps
+            best_generation = generation
+
+    # Write final best individual to files
+    ga.write_to_files(best_individual, best_generation, best_score)
+    # Print number of steps
+    print("Total number of calling to fitness:", best_steps)
+    end_time = time.time()
+    elapsed_time = (end_time - start_time) / 60
+    print("Elapsed time:", elapsed_time)
