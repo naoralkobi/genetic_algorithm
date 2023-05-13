@@ -181,13 +181,13 @@ class GeneticAlgorithm:
 
     def lamarckian_modification(self, individual):
         mutated_individual = individual.copy()
-        original_fitness_score = max_fitness_score = int(self.fitness(mutated_individual))
+        max_fitness_score = int(self.fitness(mutated_individual))
         self.steps += 1
 
         # Lamarckian modification
         for _ in range(LAMARCKIAN_STEPS):
             # Choose two random keys from individual
-            keys = random.sample(mutated_individual.keys(), 2)
+            keys = random.sample(list(mutated_individual.keys()), 2)
             # Swap their values
             mutated_individual[keys[0]], mutated_individual[keys[1]] = mutated_individual[keys[1]], mutated_individual[
                 keys[0]]
@@ -204,8 +204,30 @@ class GeneticAlgorithm:
 
         return mutated_individual
 
-    def evolve(self, lamarckian=None):
+    def darwin_modification(self, offspring):
+        mutated_individual = offspring.copy()
+        individual = None
+        generation = 0
+        fitness_score = int(self.fitness(offspring[0]))
+        self.steps += 1
+        for permutaion in mutated_individual:
+            current_fitness_score = int(self.fitness(permutaion))
+            self.steps += 1
+            for _ in range(2):
+                # Choose two random keys from individual
+                keys = random.sample(list(permutaion.keys()), 2)
+                # Swap their values
+                permutaion[keys[0]], permutaion[keys[1]] = permutaion[keys[1]], permutaion[keys[0]]
+                # Check if the modified individual has a better fitness score than the original
+                new_fitness_score = int(self.fitness(permutaion))
+                self.steps += 1
+                if new_fitness_score > fitness_score:
+                    individual = permutaion
+                    generation = self.generations
+                    fitness_score = new_fitness_score
+        return individual, generation, fitness_score
 
+    def evolve(self, lamarckian=None, darwin=None):
         for i in range(self.generations):
             # Evaluate fitness of each individual in population
             fitness_scores = sorted([(i, int(self.fitness(individual))) for i, individual in
@@ -249,6 +271,16 @@ class GeneticAlgorithm:
                     modified_individual = self.lamarckian_modification(offspring[j])
                     offspring[j] = modified_individual
 
+            if darwin:
+                individual, generation, fitness_score = self.darwin_modification(offspring)
+                if fitness_score > self.best_fitness:
+                    self.best_individual = individual
+                    self.best_generation = generation
+                    self.best_fitness = fitness_score
+                    self.stop_condition = 0
+                    self.local_maximum = 0
+
+
             # Elitism
             if self.best_individual not in offspring:
                 offspring[0] = self.best_individual
@@ -287,8 +319,9 @@ if __name__ == '__main__':
                               "enc.txt", "dict.txt", common_words_weight)
 
         # Run the genetic algorithm to find the solution
-        best_results.append(ga.evolve())
-        # ga.evolve(lamarckian=True)
+        # best_results.append(ga.evolve())
+        best_results.append(ga.evolve(lamarckian=True))
+        # best_results.append(ga.evolve(darwin=True))
         ga.write_to_files(ga.best_individual, ga.best_generation + 1, ga.best_fitness)
         LIMIT_RUN -= 1
 

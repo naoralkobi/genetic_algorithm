@@ -22,8 +22,8 @@ for c in real_text:
     new_char = permutation.get(c, c)
     ciphertext += new_char
 
-# with open("textFileEnc.txt", "w") as file:
-#     file.write(ciphertext)
+with open("textFileEnc.txt", "w") as file:
+    file.write(ciphertext)
 
 # Create an instance of the GeneticAlgorithm class
 ga = GeneticAlgorithm(population_size, mutation_rate, num_generations, "Letter_Freq.txt", "Letter2_Freq.txt",
