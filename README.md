@@ -12,9 +12,10 @@ This program is a Python implementation of a genetic algorithm to solve a crypto
 ## Requirements
 - Python 3.7 or higher
 - Required Python libraries are: 
-  - pandas
-  - numpy
-  - joblib
+  - random
+  - re
+  - string
+  - time
 
 ## How to Use
 1. Clone the repository or download the code as a zip file.
@@ -24,8 +25,7 @@ This program is a Python implementation of a genetic algorithm to solve a crypto
     - A letter frequency file containing the frequency of letters in the English language.
     - A bigram frequency file containing the frequency of bigrams in the English language.
     - A common words file containing a list of common English words.
-4. Set the input parameters in the configuration file (config.json).
-5. Run the program by executing the following command in the terminal:
+4. Run the program by executing the following command in the terminal:
    ```
    python3 genetic_algorithm.py
    ```
