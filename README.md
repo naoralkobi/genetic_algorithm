@@ -27,7 +27,7 @@ This program is a Python implementation of a genetic algorithm to solve a crypto
 4. Set the input parameters in the configuration file (config.json).
 5. Run the program by executing the following command in the terminal:
    ```
-   python genetic_algorithm.py
+   python3 genetic_algorithm.py
    ```
 6. The program will output the best individual found, along with the fitness score and the decrypted message.
 
