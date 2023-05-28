@@ -27,9 +27,15 @@ This program is a Python implementation of a genetic algorithm to solve a crypto
 4. Set the input parameters in the configuration file (config.json).
 5. Run the program by executing the following command in the terminal:
    ```
-   python main.py
+   python genetic_algorithm.py
    ```
 6. The program will output the best individual found, along with the fitness score and the decrypted message.
+
+7. in the main you choose three different type of running:
+    1. default
+    2. lamarckian
+    3. darwin
+    choose the one you want and put all the other in comment.
 
 **Note**: The program assumes that the input files are formatted correctly and that the ciphertext is in English. If the input files are not in the correct format or the ciphertext is in a different language, the program may not produce accurate results.
 
