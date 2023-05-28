@@ -6,11 +6,11 @@ import time
 STOP_CONDITION = 30
 TOURNAMENT_SIZE = 10
 NUM_PARENTS = 100
-NUM_OF_WORKERS = 10
 LAMARCKIAN_STEPS = 10
-LOCAL_MAXIMUM = 10
+LOCAL_MAXIMUM = 20
 IS_LOCAL_MAXIMUM = 1
 LIMIT_RUN = 5
+
 
 def read_frequencies(filename):
     """Load letter frequency data from a file."""
@@ -148,22 +148,23 @@ class GeneticAlgorithm:
         return find_missing_mapping(child1), find_missing_mapping(child2)
 
     def mutation(self, offspring):
-        for i in range(len(offspring)):
-            if random.random() < self.mutation_rate:
-                # Choose two random positions in the individual
-                idx1, idx2 = random.sample(range(len(self.alphabet)), 2)
-                # Swap the characters at the two positions
-                symbol1, symbol2 = self.alphabet[idx1], self.alphabet[idx2]
-                offspring[symbol1], offspring[symbol2] = offspring[symbol2], offspring[symbol1]
+        if random.random() < self.mutation_rate:
+            # Choose two random positions in the individual
+            idx1, idx2 = random.sample(range(len(self.alphabet)), 2)
+            # Swap the characters at the two positions
+            symbol1, symbol2 = self.alphabet[idx1], self.alphabet[idx2]
+            offspring[symbol1], offspring[symbol2] = offspring[symbol2], offspring[symbol1]
         return offspring
 
     def decode_text(self, individual):
         """Decode the ciphertext using the given permutation table."""
         text = ""
-        for c in self.ciphertext:
-            new_char = individual.get(c, c)
-            text += new_char
-        return text
+        if individual:
+            for c in self.ciphertext:
+                new_char = individual.get(c, c)
+                text += new_char
+            return text
+        return " "
 
     def write_to_files(self, individual, generation, best_fitness):
         # Write the decoded text to plain.txt
@@ -228,6 +229,7 @@ class GeneticAlgorithm:
         return individual, generation, fitness_score
 
     def evolve(self, lamarckian=None, darwin=None):
+        global IS_LOCAL_MAXIMUM
         for i in range(self.generations):
             # Evaluate fitness of each individual in population
             fitness_scores = sorted([(i, int(self.fitness(individual))) for i, individual in
@@ -246,7 +248,7 @@ class GeneticAlgorithm:
                 self.local_maximum = 0
 
             # Write current best individual to files
-            # self.write_to_files(self.best_individual, i + 1, self.best_fitness)
+            self.write_to_files(self.best_individual, i + 1, self.best_fitness)
 
             # Selection
             parents = [self.tournament_selection(fitness_scores) for _ in range(NUM_PARENTS)]
@@ -285,7 +287,7 @@ class GeneticAlgorithm:
             if self.best_individual not in offspring:
                 offspring[0] = self.best_individual
 
-            if self.local_maximum == LOCAL_MAXIMUM:
+            if self.local_maximum == LOCAL_MAXIMUM and IS_LOCAL_MAXIMUM:
                 print("move out from local maximum")
                 return self.best_individual, self.best_generation, self.best_fitness, self.steps
 
@@ -294,10 +296,12 @@ class GeneticAlgorithm:
             self.stop_condition += 1
             self.local_maximum += 1
 
-            if self.stop_condition == STOP_CONDITION and self.generations > 75:
-                print("STOP DUO TO - No change after %s generation" % self.stop_condition)
+            if i > 75:
                 IS_LOCAL_MAXIMUM = 0
-                break
+
+            if self.stop_condition == STOP_CONDITION:
+                print("STOP DUO TO - No change after %s generation" % self.stop_condition)
+                return self.best_individual, self.best_generation, self.best_fitness, self.steps
 
         return self.best_individual, self.best_generation, self.best_fitness, self.steps
 
@@ -306,12 +310,12 @@ if __name__ == '__main__':
     ga = None
     population_size = 100
     mutation_rate = 0.05
-    num_generations = 300
+    num_generations = 1000
     common_words_weight = 0.3
     start_time = time.time()
     best_results = []
     index = 0
-    while IS_LOCAL_MAXIMUM and LIMIT_RUN > 0:
+    while LIMIT_RUN > 0:
         index += 1
         print("start running number: " + str(index))
         # Create an instance of the GeneticAlgorithm class
@@ -320,8 +324,8 @@ if __name__ == '__main__':
 
         # Run the genetic algorithm to find the solution
         # best_results.append(ga.evolve())
-        best_results.append(ga.evolve(lamarckian=True))
-        # best_results.append(ga.evolve(darwin=True))
+        # best_results.append(ga.evolve(lamarckian=True))
+        best_results.append(ga.evolve(darwin=True))
         ga.write_to_files(ga.best_individual, ga.best_generation + 1, ga.best_fitness)
         LIMIT_RUN -= 1
 
